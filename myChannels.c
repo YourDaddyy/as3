@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <pthread.h>
 
 // Define the structure to hold channel information
@@ -36,18 +37,34 @@ void readMetadataFile() {
         exit(1);
     }
 
+    fseek(metadata_file, 3, SEEK_SET);
+
+    // fgets(first_line, 10, metadata_file);
     fscanf(metadata_file, "%d", &num_channels);
+    printf("Number of channels: %d\n", num_channels);
+
     channels = malloc(num_channels * sizeof(ChannelInfo));
 
+    char file_path[100];
+
+    // Skip the newline characters after num_channels
+
     for (int i = 0; i < num_channels; i++) {
-        channels[i].file_path = malloc(100 * sizeof(char));
-        fscanf(metadata_file, "%s", channels[i].file_path);
+        fscanf(metadata_file, "%s", file_path);
+        // Skip the newline characters after the file path
+
+        channels[i].file_path = malloc((strlen(file_path) + 1) * sizeof(char));
+        strcpy(channels[i].file_path, file_path);
+
         fscanf(metadata_file, "%f", &channels[i].alpha);
         fscanf(metadata_file, "%f", &channels[i].beta);
+        printf("Channel %d: %s, %f, %f\n", i, channels[i].file_path, channels[i].alpha, channels[i].beta);
     }
 
     fclose(metadata_file);
 }
+
+
 
 // Function to apply low-pass filter and amplification to a sample
 int processSample(int sample, float alpha, float beta, int previous_sample) {
@@ -152,6 +169,7 @@ void writeOutputFile() {
 }
 
 int main(int argc, char* argv[]) {
+
     if (argc != 7) {
         printf("Invalid number of arguments\n");
         return 1;
@@ -166,12 +184,12 @@ int main(int argc, char* argv[]) {
     output_file_path = argv[6];
 
     // Initialize locks and condition variable
-    pthread_mutex_init(&global_lock, NULL);
-    granular_locks = malloc(num_channels * sizeof(pthread_mutex_t));
-    for (int i = 0; i < num_channels; i++) {
-        pthread_mutex_init(&granular_locks[i], NULL);
-    }
-    pthread_cond_init(&condition, NULL);
+    // pthread_mutex_init(&global_lock, NULL);
+    // granular_locks = malloc(num_channels * sizeof(pthread_mutex_t));
+    // for (int i = 0; i < num_channels; i++) {
+    //     pthread_mutex_init(&granular_locks[i], NULL);
+    // }
+    // pthread_cond_init(&condition, NULL);
 
     // Read the metadata file
     readMetadataFile();

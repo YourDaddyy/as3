@@ -3,6 +3,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <unistd.h>
 
 // Define the structure to hold channel information
 typedef struct {
@@ -24,6 +25,7 @@ char* metadata_file_path;
 int lock_config;
 int global_checkpointing;
 char* output_file_path;
+int turn = 0;
 
 ChannelInfo* channels;
 int num_channels;
@@ -232,11 +234,11 @@ int cas_float(float *ptr, float oldval, float newval) {
 
 void process_ouput_value(int channel_index){
     if(lock_config == 1){
-        // pthread_mutex_lock(&global_lock);
+        pthread_mutex_lock(&global_lock);
         for(int j = 0; j < num_samples; j++){
             samples[j] += channels[channel_index].sample_value_beta[j];
         }
-        // pthread_mutex_unlock(&global_lock);
+        pthread_mutex_unlock(&global_lock);
     }else if(lock_config == 2){
         for(int j = 0; j < num_samples; j++){
             pthread_mutex_lock(&granular_locks[j]);
@@ -275,6 +277,7 @@ void* threadFunction(void* arg) {
         if(global_checkpointing){
             pthread_mutex_unlock(&global_lock);
         }
+        // sleep(1);
         if(res == -1){
             count++;
             if(count == files_per_thread){

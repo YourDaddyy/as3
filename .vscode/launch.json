@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/myChannels",
-            "args": ["1024", "2", "input_files/inputs/metadata.txt", "1", "1", "output.txt"],
+            "args": ["3", "2", "input_files/inputs/metadata2.txt", "1", "0", "output.txt"],
             "cwd": "${workspaceFolder}"
         }
     ]

@@ -26,6 +26,7 @@ int lock_config;
 int global_checkpointing;
 char* output_file_path;
 int turn = 0;
+int threads_working;
 
 ChannelInfo* channels;
 int num_channels;
@@ -210,7 +211,7 @@ int processChannelFile(int i) {
         channels[i].samples = realloc(channels[i].samples, (channels[i].samples_length + 1) * sizeof(int));
 
         channels[i].samples[channels[i].samples_length] = atoi(sample_value);
-        printf("%d channel: %d  pos: %d\n", channels[i].samples[channels[i].samples_length], i, channels[i].samples_length);
+        printf("                                %d  pos: %d\n", channels[i].samples[channels[i].samples_length],channels[i].samples_length);
         channels[i].samples_length += 1;
     }
     // Update the start and end indices
@@ -269,23 +270,35 @@ void* threadFunction(void* arg) {
     
     // Process the assigned channel files
     while(1){
+        if(threads_working == 0) break;
         if(i > end_channel) i = start_channel;
         if(global_checkpointing){
             pthread_mutex_lock(&global_lock);
+            if(turn != thread_id){
+                pthread_cond_wait(&condition, &global_lock);
+            }
         }
+        printf("thread %d processing channel %d\n", thread_id, i);
         int res = processChannelFile(i);
         if(global_checkpointing){
+            turn = (turn + 1) % num_threads;
+            pthread_cond_broadcast(&condition);
             pthread_mutex_unlock(&global_lock);
         }
-        // sleep(1);
+        // sleep(0.01);
         if(res == -1){
             count++;
             if(count == files_per_thread){
-                break;
+                if(global_checkpointing){
+                    threads_working--; // global_checkpointing == 1 mode
+                }else{
+                    break; // global_checkpointing == 0 mode
+                }
             }
             i++;
             continue;
         }
+        
         if(res != -1 && count > 0){
             count = 0;
         }
@@ -359,6 +372,7 @@ int main(int argc, char* argv[]) {
     // Create threads
     pthread_t* threads = malloc(num_threads * sizeof(pthread_t));
     int* thread_ids = malloc(num_threads * sizeof(int));
+    threads_working = num_threads;
 
     for (int i = 0; i < num_threads; i++) {
         thread_ids[i] = i;

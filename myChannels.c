@@ -223,6 +223,11 @@ int processChannelFile(int i) {
     // Update the global num_samples variable
     if(num_samples < channels[i].samples_length){
         num_samples = channels[i].samples_length;
+        granular_locks = realloc(granular_locks, num_samples * sizeof(pthread_mutex_t));
+        // Initialize the new locks
+        for (int i = num_samples; i < num_samples; i++) {
+            pthread_mutex_init(&granular_locks[i], NULL);
+        }
     }
     return 1;
 }
@@ -360,7 +365,7 @@ int main(int argc, char* argv[]) {
 
     // Initialize locks and condition variable
     pthread_mutex_init(&global_lock, NULL);
-    granular_locks = malloc(num_channels * sizeof(pthread_mutex_t));
+    granular_locks = malloc(num_samples * sizeof(pthread_mutex_t));
     for (int i = 0; i < num_samples; i++) {
         pthread_mutex_init(&granular_locks[i], NULL);
     }
@@ -390,11 +395,14 @@ int main(int argc, char* argv[]) {
     // Clean up
     pthread_mutex_destroy(&global_lock);
     for (int i = 0; i < num_channels; i++) {
-        pthread_mutex_destroy(&granular_locks[i]);
+        
         free(channels[i].file_path);
         free(channels[i].file);
         free(channels[i].samples);
         free(channels[i].sample_value_beta);
+    }
+    for(int i = 0; i < num_samples; i++){
+        pthread_mutex_destroy(&granular_locks[i]);
     }
     free(granular_locks);
     free(channels);
